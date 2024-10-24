@@ -12,10 +12,6 @@ public:
     void forward(const Tensor& input, Tensor& output);
     
 private:
-    cudnnConvolutionDescriptor_t convDesc;
-    cudnnFilterDescriptor_t filterDesc;
-    cudnnTensorDescriptor_t biasDesc;
-    
     float *weights{nullptr};
     float *bias{nullptr};
     
