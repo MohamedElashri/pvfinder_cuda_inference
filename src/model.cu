@@ -82,11 +82,48 @@ void PVFinderModel::forward(const Tensor& input, Tensor& output) {
     // Final convolutions
     Tensor out_inter(up2_out.dims[0], 64, 100, 1);
     outIntermediate->forward(up2_out, out_inter);
+
+    // Debug prints for intermediate values
+    #ifdef DEBUG_OUTPUT
+    std::vector<float> debug_inter(out_inter.dims[0] * out_inter.dims[1] * out_inter.dims[2]);
+    CUDA_CHECK(cudaMemcpy(debug_inter.data(), out_inter.data, 
+                         debug_inter.size() * sizeof(float), 
+                         cudaMemcpyDeviceToHost));
+    std::cout << "Pre-final conv stats:\n";
+    float max_inter = *std::max_element(debug_inter.begin(), debug_inter.end());
+    float min_inter = *std::min_element(debug_inter.begin(), debug_inter.end());
+    std::cout << "  Max: " << max_inter << ", Min: " << min_inter << "\n";
+    #endif    
+
     outFinal->forward(out_inter, output);
-    
+
+     // Debug prints before activation
+    #ifdef DEBUG_OUTPUT
+    std::vector<float> pre_act(output.size / sizeof(float));
+    CUDA_CHECK(cudaMemcpy(pre_act.data(), output.data, 
+                         output.size, 
+                         cudaMemcpyDeviceToHost));
+    std::cout << "Pre-activation stats:\n";
+    float max_pre = *std::max_element(pre_act.begin(), pre_act.end());
+    float min_pre = *std::min_element(pre_act.begin(), pre_act.end());
+    std::cout << "  Max: " << max_pre << ", Min: " << min_pre << "\n";
+    #endif
+
     // Final activation and scaling
     softplus(output);
     scale(output, 0.001f);
+
+    // Final debug prints
+    #ifdef DEBUG_OUTPUT
+    std::vector<float> final_out(output.size / sizeof(float));
+    CUDA_CHECK(cudaMemcpy(final_out.data(), output.data, 
+                         output.size, 
+                         cudaMemcpyDeviceToHost));
+    std::cout << "Final output stats:\n";
+    float max_final = *std::max_element(final_out.begin(), final_out.end());
+    float min_final = *std::min_element(final_out.begin(), final_out.end());
+    std::cout << "  Max: " << max_final << ", Min: " << min_final << "\n";
+    #endif
 }
 
 void PVFinderModel::loadWeights(const std::string& path) {
